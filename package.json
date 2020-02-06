@@ -1,0 +1,28 @@
+{
+  "name": "atlast",
+  "version": "0.0.1",
+  "description": "Texture atlas generator for webgl sprite sheets",
+  "main": "atlast.js",
+  "scripts": {
+    "atlast": "node atlast"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/spencerjbeckwith/atlast.git"
+  },
+  "keywords": [
+    "atlas",
+    "texture",
+    "webgl",
+    "sprite"
+  ],
+  "author": "Spencer J. Beckwith",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/spencerjbeckwith/atlast/issues"
+  },
+  "homepage": "https://github.com/spencerjbeckwith/atlast#readme",
+  "dependencies": {
+    "jimp": "^0.9.3"
+  }
+}
