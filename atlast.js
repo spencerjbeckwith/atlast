@@ -1,17 +1,71 @@
+//THINGS TO CONSIDER:
+//  make the program confirm to overwrite files, unless that has been specified as ok in config.json
+//  how do we get all of our images? should it just do every image in a folder, maybe?
+
 const fs = require(`fs`);
 const Jimp = require(`jimp`);
 
 const config = JSON.parse(fs.readFileSync(`config.json`));
-let outputObject = {};
+const outputObject = [];
 
 function compile() {
-    new Jimp(config.atlasWidth,config.atlasHeight,(error,image) => {
-        //Plop all the images in
+    console.log(`Compiling atlas from directory: ${config.directory}...`);
+    console.group();
 
-        //Save the final Jump to a file
+    new Jimp(config.atlasWidth,config.atlasHeight,(error,image) => {
+        //Find all our file paths
+        const directory = fs.opendirSync(config.directory);
+        let pathObject = [];
+
+        let dirent = directory.readSync();
+        while (dirent !== null) {
+            if (dirent.isDirectory()) {
+                console.log(`Opening directory: ${dirent.name}`);
+                console.group();
+                let innerPathObject = [];
+
+                //Open inner directory
+                const innerDirectory = fs.opendirSync(`${config.directory}\\${dirent.name}`);
+                let innerDirent = innerDirectory.readSync();
+                while (innerDirent !== null) {
+                    if (innerDirent.isDirectory()) {
+                        throw `Too many nested directories! Path: ${config.directory}\\${dirent.name}.`;
+                    } else if (innerDirent.isFile()) {
+                        //Add file to sprite entry
+                        if (innerDirent.name.endsWith(`.png`)) {
+                            console.log(`Adding PNG file to directory: ${innerDirent.name}`);
+                            innerPathObject.push(`${config.directory}\\${dirent.name}\\${innerDirent.name}`);
+                        }
+                    }
+                    innerDirent = innerDirectory.readSync();
+                }
+
+                pathObject.push(innerPathObject);
+                innerDirectory.closeSync();
+                console.groupEnd();
+            } else if (dirent.isFile()) {
+                if (dirent.name.endsWith(`.png`)) {
+                    console.log(`Adding singular PNG file: ${dirent.name}`);
+                    pathObject.push(`${config.directory}\\${dirent.name}`);
+                }
+            }
+
+            dirent = directory.readSync();
+        }
+        directory.closeSync();
+        
+        console.log(pathObject);
+
+
+        //
+
+        //Save the outputs
         image.write(config.outputImageName);
+        fs.writeFileSync(config.outputJSONName,JSON.stringify(outputObject));
+
+        console.groupEnd();
+        console.log(`Atlas complete! Image output: ${config.outputImageName}, JSON output: ${config.outputJSONName}`);
     });
-    fs.writeFileSync(config.outputJSONName,JSON.stringify(outputObject));
 }
 
 function set(key,value) {
