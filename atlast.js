@@ -8,6 +8,17 @@ const Jimp = require(`jimp`);
 const config = JSON.parse(fs.readFileSync(`config.json`));
 const outputObject = [];
 
+function readJimp(directory) {
+    //this is our closing function?
+    Jimp.read(directory)
+        .then((image => {
+
+        }))
+        .catch((error) => {
+            throw 
+        })
+}
+
 function compile() {
     console.log(`Compiling atlas from directory: ${config.directory}...`);
     console.group();
@@ -34,7 +45,10 @@ function compile() {
                         //Add file to sprite entry
                         if (innerDirent.name.endsWith(`.png`)) {
                             console.log(`Adding PNG file to directory: ${innerDirent.name}`);
-                            innerPathObject.push(`${config.directory}\\${dirent.name}\\${innerDirent.name}`);
+                            /*innerPathObject.push({
+                                location: `${config.directory}\\${dirent.name}\\${innerDirent.name}`,
+                                name: dirent.name
+                            });*/
                         }
                     }
                     innerDirent = innerDirectory.readSync();
@@ -45,26 +59,89 @@ function compile() {
                 console.groupEnd();
             } else if (dirent.isFile()) {
                 if (dirent.name.endsWith(`.png`)) {
-                    console.log(`Adding singular PNG file: ${dirent.name}`);
-                    pathObject.push(`${config.directory}\\${dirent.name}`);
+
+                        //USE A CLOSURE HERE. but how? oof
+
+                    Jimp.read(`${config.directory}\\${dirent.name}`)
+                        .then((image) => {
+
+                            console.log(`Loaded singular PNG file: ${dirent.name}`);
+                            pathObject.push({
+                                name: dirent.name.replace(`.png`,``),
+                                image: image
+                            });
+                        }).catch((error) => {
+                            throw `Error loading image: ${error}`;
+                        });
                 }
             }
 
             dirent = directory.readSync();
         }
         directory.closeSync();
-        
-        console.log(pathObject);
 
+        /*
+        ALGORITHM IDEAS:
+        Optimal placement.
+            Put down the images in order of largest to smallest. This gets the big ones out of the way.
+                How to make this work, though?
+                    I have to cycle according to the size of the images, which can be real tricky. Or, maybe not?
+                Then the little ones take up just the remaining space. Maybe, each image is just placed wherever it can be, not in relation to its other images?
+                    Then I need a way to find space that hasn't been taken already, and an algorithm to plop images in there.
 
-        //
+        -Sort the pathObject according to the size of each entry.
+        -cycle through:
+            -find a spot that isn't taken
+            -place the jimp, record its location for the output object
+        */
+
+        /*console.log(`Writing to the atlas...`);
+        console.group();
+        let placeName = ``, placeX = 0, placeY = 0, placeW = 0, placeH = 0;
+        pathObject.forEach((element) => {
+            if (typeof element.location === `string`) {
+                //One-image sprite
+                //Place inside the jimp
+
+                //One image sprite
+                placeName = element.name;
+                console.log(`Placing element ${placeName}...`);
+                outputObject.push({
+                    name: placeName,
+                    x: placeX,
+                    y: placeY,
+                    w: placeW,
+                    h: placeH
+                });
+
+            } else if (typeof element === `object`) {
+                //Array - sprite with multiple images
+                let spriteObject = [];
+                element.forEach((element) => {
+                    //Place inside the Jimp
+
+                    //One image inside a sprite
+                    placeName = element.name;
+                    console.log(`Placing a nested element of ${placeName} at (${placeX},${placeY})...`)
+                    spriteObject.push({
+                        name: placeName,
+                        x: placeX,
+                        y: placeY,
+                        w: placeW,
+                        h: placeH
+                    });
+                });
+                outputObject.push(spriteObject);
+            }
+        });
+        console.groupEnd();*/
 
         //Save the outputs
-        image.write(config.outputImageName);
+        /*image.write(config.outputImageName);
         fs.writeFileSync(config.outputJSONName,JSON.stringify(outputObject));
 
         console.groupEnd();
-        console.log(`Atlas complete! Image output: ${config.outputImageName}, JSON output: ${config.outputJSONName}`);
+        console.log(`Atlas complete! Image output: ${config.outputImageName}, JSON output: ${config.outputJSONName}`);*/
     });
 }
 
