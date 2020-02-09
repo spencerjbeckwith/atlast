@@ -10,6 +10,7 @@ const config = JSON.parse(fs.readFileSync(`config.json`));
 const sprites = [];
 let totalImages = 0;
 let loadedImages = 0;
+let totalPixels = 0;
 
 class Sprite {
     constructor(fileNameArray,spriteName) {
@@ -29,6 +30,7 @@ class Sprite {
                     throw error;
                 });
         }
+        console.log(`Loading: ${this.spriteName} (${fileNameArray.length} images)`);
     }
 
     pushImage(image) { //bound to object {sprite, iteration} in constructor
@@ -36,132 +38,122 @@ class Sprite {
         this.sprite.width = Math.max(this.sprite.width,image.bitmap.width);
         this.sprite.height = Math.max(this.sprite.height,image.bitmap.height);
 
+        totalPixels += this.sprite.width*this.sprite.height;
         loadedImages++;
         if (loadedImages >= totalImages) {
             arrangeAtlas();
         }
     }
+
+    getSize() {
+        return this.width*this.height;
+    }
 }
 
 function compile() {
-    console.log(`Compiling atlas from directory: ${config.directory}...`);
+    console.log(`Loading sprite images from directory: ${config.directory}...`);
     console.group();
 
-    new Jimp(config.atlasWidth,config.atlasHeight,(error,image) => {
-        //Find all our file paths
-        const directory = fs.opendirSync(config.directory);
-        let dirent = directory.readSync();
+    //Find all our file paths
+    const directory = fs.opendirSync(config.directory);
+    let dirent = directory.readSync();
 
-        while (dirent !== null) {
-            if (dirent.isDirectory()) {
-                //Open inner directory
-                console.log(`Opening directory: ${dirent.name}`);
-                console.group();
+    while (dirent !== null) {
+        if (dirent.isDirectory()) {
+            //Open inner directory
+            const innerDirectory = fs.opendirSync(`${config.directory}\\${dirent.name}`);
+            let innerDirent = innerDirectory.readSync();
+            let fnArray = [];
 
-                const innerDirectory = fs.opendirSync(`${config.directory}\\${dirent.name}`);
-                let innerDirent = innerDirectory.readSync();
-                let fnArray = [];
-
-                while (innerDirent !== null) {
-                    if (innerDirent.isDirectory()) {
-                        console.warn(`Too many nested directories! Folders inside this folder will not be read.`);
-                    } else if (innerDirent.isFile()) {
-                        if (innerDirent.name.endsWith(`.png`)) {
-                            fnArray.push(`${config.directory}\\${dirent.name}\\${innerDirent.name}`);
-                        }
+            while (innerDirent !== null) {
+                if (innerDirent.isDirectory()) {
+                    console.warn(`Too many nested directories! Folders nested inside this directory (${dirent.name}) will not be read.`);
+                } else if (innerDirent.isFile()) {
+                    if (innerDirent.name.endsWith(`.png`)) {
+                        fnArray.push(`${config.directory}\\${dirent.name}\\${innerDirent.name}`);
                     }
-                    innerDirent = innerDirectory.readSync();
                 }
-
-                if (fnArray.length > 0) {
-                    sprites.push(new Sprite(fnArray,dirent.name));
-                } else {
-                    console.warn(`This directory was empty!`);
-                }
-
-                console.groupEnd();
-                innerDirectory.closeSync();
-            } else if (dirent.isFile()) {
-                if (dirent.name.endsWith(`.png`)) {
-                    //Open one-image sprite
-                    console.log(`Opening file: ${dirent.name}`);
-
-                    let fnArray = [ `${config.directory}\\${dirent.name}` ];
-                    sprites.push(new Sprite(fnArray,dirent.name.replace(`.png`,``)));
-                }
+                innerDirent = innerDirectory.readSync();
             }
 
-            dirent = directory.readSync();
+            if (fnArray.length > 0) {
+                sprites.push(new Sprite(fnArray,dirent.name));
+            } else {
+                console.warn(`Directory (${dirent.name}) has no images!`);
+            }
+
+            innerDirectory.closeSync();
+        } else if (dirent.isFile()) {
+            if (dirent.name.endsWith(`.png`)) {
+                let fnArray = [ `${config.directory}\\${dirent.name}` ];
+                sprites.push(new Sprite(fnArray,dirent.name.replace(`.png`,``)));
+            }
         }
-        directory.closeSync();
 
-        /*
-        ALGORITHM IDEAS:
-        Optimal placement.
-            Put down the images in order of largest to smallest. This gets the big ones out of the way.
-                How to make this work, though?
-                    I have to cycle according to the size of the images, which can be real tricky. Or, maybe not?
-                Then the little ones take up just the remaining space. Maybe, each image is just placed wherever it can be, not in relation to its other images?
-                    Then I need a way to find space that hasn't been taken already, and an algorithm to plop images in there.
-
-        -Sort the pathObject according to the size of each entry.
-        -cycle through:
-            -find a spot that isn't taken
-            -place the jimp, record its location for the output object
-        */
-
-        /*console.log(`Writing to the atlas...`);
-        console.group();
-        let placeName = ``, placeX = 0, placeY = 0, placeW = 0, placeH = 0;
-        pathObject.forEach((element) => {
-            if (typeof element.location === `string`) {
-                //One-image sprite
-                //Place inside the jimp
-
-                //One image sprite
-                placeName = element.name;
-                console.log(`Placing element ${placeName}...`);
-                outputObject.push({
-                    name: placeName,
-                    x: placeX,
-                    y: placeY,
-                    w: placeW,
-                    h: placeH
-                });
-
-            } else if (typeof element === `object`) {
-                //Array - sprite with multiple images
-                let spriteObject = [];
-                element.forEach((element) => {
-                    //Place inside the Jimp
-
-                    //One image inside a sprite
-                    placeName = element.name;
-                    console.log(`Placing a nested element of ${placeName} at (${placeX},${placeY})...`)
-                    spriteObject.push({
-                        name: placeName,
-                        x: placeX,
-                        y: placeY,
-                        w: placeW,
-                        h: placeH
-                    });
-                });
-                outputObject.push(spriteObject);
-            }
-        });
-        console.groupEnd();*/
-
-        //Save the outputs
-        /*image.write(config.outputImageName);
-        fs.writeFileSync(config.outputJSONName,JSON.stringify(outputObject));
-
-        console.groupEnd();
-        console.log(`Atlas complete! Image output: ${config.outputImageName}, JSON output: ${config.outputJSONName}`);*/
-    });
+        dirent = directory.readSync();
+    }
+    directory.closeSync();
+    console.groupEnd();
 }
 
-function arrangeAtlas() { //Called by a sprite instance when all image are loaded by JIMP.
-    console.log(sprites);
+function arrangeAtlas() { //Called by a sprite instance when all images are loaded by JIMP.
+    console.log(`All sprite images loaded. Writing to the atlas...`);
+    console.group();
+
+    //Preliminary check to see if we have enough space
+    const maxPixels = config.atlasWidth*config.atlasHeight;
+    console.log(`Atlas size: ${config.atlasWidth}, ${config.atlasHeight}, totalling ${maxPixels} pixels.`);
+    console.log(`Image expected to use ${totalPixels} pixels, which is ${(totalPixels/maxPixels)*100}% of the atlas.`);
+    if (totalPixels > maxPixels) {
+        throw `Atlas size is too small! Increase the size with "npm run atlast set atlasWidth/atlasHeight <value>"`;
+    }
+
+    //Sort the sprite array: largest to smallest
+    sprites.sort((sprite1,sprite2) => {
+        return (sprite2.getSize() - sprite1.getSize());
+    });
+
+    new Jimp(config.atlasWidth,config.atlasHeight,(error,image) => {
+        //Find open places for each sprite and each of its images, doing larger sprites first
+        const outputObject = [];
+        for (let s = 0; s < sprites.length; s++) {
+            const spriteOutput = {
+                name: sprites[s].spriteName,
+                width: sprites[s].width,
+                height: sprites[s].height,
+                images: []
+            }
+            for (let i = 0; i < sprites[s].images.length; i++) {
+                let placeX = 0, placeY = 0, placeW = spriteOutput.width, placeH = spriteOutput.height;
+                //check a spot
+            
+                //if spot is open
+
+                //place image, record its location into imageoutput
+
+                //move on to next iteration
+
+                //if spot is not open
+
+                //try another spot - repeat.
+
+                //if no open spots: throw error.
+
+                image.composite(sprites[s].images[i],placeX,placeY);
+                let imageOutput = {
+                    x: placeX, y: placeY
+                };
+                spriteOutput.images.push(imageOutput);
+            }
+            outputObject.push(spriteOutput);
+        }
+
+        //Save the outputs
+        image.write(config.outputImageName);
+        fs.writeFileSync(config.outputJSONName,JSON.stringify(outputObject,null,Number(config.outputWhitespace)));
+    });
+    console.groupEnd();
+    console.log(`Atlas complete! Image output: ${config.outputImageName}, JSON output: ${config.outputJSONName}`);
 }
 
 function set(key,value) {
