@@ -6,17 +6,41 @@ const fs = require(`fs`);
 const Jimp = require(`jimp`);
 
 const config = JSON.parse(fs.readFileSync(`config.json`));
-const outputObject = [];
 
-function readJimp(directory) {
-    //this is our closing function?
-    Jimp.read(directory)
-        .then((image => {
+const sprites = [];
+let totalImages = 0;
+let loadedImages = 0;
 
-        }))
-        .catch((error) => {
-            throw 
-        })
+class Sprite {
+    constructor(fileNameArray,spriteName) {
+        this.spriteName = spriteName;
+        this.width = 0;
+        this.height = 0;
+
+        this.images = [];
+        for (let f = 0; f < fileNameArray.length; f++) {
+            totalImages++;
+            Jimp.read(fileNameArray[f])
+                .then(this.pushImage.bind({
+                    sprite: this,
+                    iteration: f
+                }))
+                .catch(function(error) {
+                    throw error;
+                });
+        }
+    }
+
+    pushImage(image) { //bound to object {sprite, iteration} in constructor
+        this.sprite.images[this.iteration] = image;
+        this.sprite.width = Math.max(this.sprite.width,image.bitmap.width);
+        this.sprite.height = Math.max(this.sprite.height,image.bitmap.height);
+
+        loadedImages++;
+        if (loadedImages >= totalImages) {
+            arrangeAtlas();
+        }
+    }
 }
 
 function compile() {
@@ -26,53 +50,44 @@ function compile() {
     new Jimp(config.atlasWidth,config.atlasHeight,(error,image) => {
         //Find all our file paths
         const directory = fs.opendirSync(config.directory);
-        let pathObject = [];
-
         let dirent = directory.readSync();
+
         while (dirent !== null) {
             if (dirent.isDirectory()) {
+                //Open inner directory
                 console.log(`Opening directory: ${dirent.name}`);
                 console.group();
-                let innerPathObject = [];
 
-                //Open inner directory
                 const innerDirectory = fs.opendirSync(`${config.directory}\\${dirent.name}`);
                 let innerDirent = innerDirectory.readSync();
+                let fnArray = [];
+
                 while (innerDirent !== null) {
                     if (innerDirent.isDirectory()) {
-                        throw `Too many nested directories! Path: ${config.directory}\\${dirent.name}.`;
+                        console.warn(`Too many nested directories! Folders inside this folder will not be read.`);
                     } else if (innerDirent.isFile()) {
-                        //Add file to sprite entry
                         if (innerDirent.name.endsWith(`.png`)) {
-                            console.log(`Adding PNG file to directory: ${innerDirent.name}`);
-                            /*innerPathObject.push({
-                                location: `${config.directory}\\${dirent.name}\\${innerDirent.name}`,
-                                name: dirent.name
-                            });*/
+                            fnArray.push(`${config.directory}\\${dirent.name}\\${innerDirent.name}`);
                         }
                     }
                     innerDirent = innerDirectory.readSync();
                 }
 
-                pathObject.push(innerPathObject);
-                innerDirectory.closeSync();
+                if (fnArray.length > 0) {
+                    sprites.push(new Sprite(fnArray,dirent.name));
+                } else {
+                    console.warn(`This directory was empty!`);
+                }
+
                 console.groupEnd();
+                innerDirectory.closeSync();
             } else if (dirent.isFile()) {
                 if (dirent.name.endsWith(`.png`)) {
+                    //Open one-image sprite
+                    console.log(`Opening file: ${dirent.name}`);
 
-                        //USE A CLOSURE HERE. but how? oof
-
-                    Jimp.read(`${config.directory}\\${dirent.name}`)
-                        .then((image) => {
-
-                            console.log(`Loaded singular PNG file: ${dirent.name}`);
-                            pathObject.push({
-                                name: dirent.name.replace(`.png`,``),
-                                image: image
-                            });
-                        }).catch((error) => {
-                            throw `Error loading image: ${error}`;
-                        });
+                    let fnArray = [ `${config.directory}\\${dirent.name}` ];
+                    sprites.push(new Sprite(fnArray,dirent.name.replace(`.png`,``)));
                 }
             }
 
@@ -143,6 +158,10 @@ function compile() {
         console.groupEnd();
         console.log(`Atlas complete! Image output: ${config.outputImageName}, JSON output: ${config.outputJSONName}`);*/
     });
+}
+
+function arrangeAtlas() { //Called by a sprite instance when all image are loaded by JIMP.
+    console.log(sprites);
 }
 
 function set(key,value) {
