@@ -1,9 +1,8 @@
-//THINGS TO CONSIDER:
-//  make the program confirm to overwrite files, unless that has been specified as ok in config.json
-//  how do we get all of our images? should it just do every image in a folder, maybe?
+// atlast by Spencer J. Beckwith. MIT license
 
 const fs = require(`fs`);
 const Jimp = require(`jimp`);
+const readlineSync = require(`readline-sync`);
 
 const config = JSON.parse(fs.readFileSync(`config.json`));
 
@@ -11,6 +10,7 @@ const sprites = [];
 let totalImages = 0;
 let loadedImages = 0;
 let totalPixels = 0;
+let changedConfig = false;
 
 class Sprite {
     constructor(fileNameArray,spriteName) {
@@ -51,6 +51,9 @@ class Sprite {
 }
 
 function compile() {
+    //Handle the configuration
+    configure(false);
+
     console.log(`Loading sprite images from directory: ${config.directory}...`);
     console.group();
 
@@ -113,6 +116,7 @@ function arrangeAtlas() { //Called by a sprite instance when all images are load
         return (sprite2.getSize() - sprite1.getSize());
     });
 
+    //Do the thing
     new Jimp(config.atlasWidth,config.atlasHeight,(error,image) => {
         //Find open places for each sprite and each of its images, doing larger sprites first
         const outputObject = [];
@@ -153,17 +157,16 @@ function arrangeAtlas() { //Called by a sprite instance when all images are load
                         }
                     }
 
-                if (placeX >= image.bitmap.width-placeW) {
-                    //We failed to find a spot.
-                    throw `Could not find location for image ${i} of sprite ${spriteOutput.name}. All available locations have been taken.`;
-                }
+                    if (placeX >= image.bitmap.width-placeW) {
+                        //We failed to find a spot.
+                        throw `Could not find location for image ${i} of sprite ${spriteOutput.name}. All available locations have been taken.`;
+                    }
                 }
             }
             outputObject.push(spriteOutput);
             console.log(`${Math.round((s/sprites.length)*100)}% Composited: ${spriteOutput.name}`)
         }
 
-        //Save the outputs
         image.write(config.outputImageName);
         fs.writeFileSync(config.outputJSONName,JSON.stringify(outputObject,null,Number(config.outputWhitespace)));
         console.groupEnd();
@@ -187,13 +190,59 @@ function set(key,value) {
         throw `Cannot update config: both a key and value must be specified.`;
     }
     config[key] = value;
+    saveConfig();
+}
+
+function saveConfig() {
+    console.log(`Saving configuration...`);
+    if (!config.outputWhitespace) {
+        config.outputWhitespace = readlineSync.questionInt(`Please enter a number of spaces to use as whitespace for config.json: `);
+    }
     fs.writeFileSync(`config.json`,JSON.stringify(config,null,Number(config.outputWhitespace)));
-    console.log(`config.json has been updated.`);
+    console.log(`Atlast configuration has been updated.`);
 }
 
 function help() {
     //Display help
     console.log(`atlast by Spencer J. Beckwith. Version ${require(`./package.json`).version}.`);
+    console.log(`Not sure how to get started? There are only two commands you need:`);
+    console.group(); 
+    console.log(`atlast config - allows you to set your configuration, such as the locations of your images.`);
+    console.log(`atlast compile - compiles your texture atlas from the specified configuration.`);
+    console.groupEnd();
+}
+
+function configure(dontCheck) {
+    if (!config.directory || dontCheck) {
+        config.directory = readlineSync.question(`Please enter the root directory of all images you wish to compile: `);
+        changedConfig = true;
+    }
+    if (!config.atlasWidth || dontCheck) {
+        config.atlasWidth = readlineSync.questionInt(`Please enter a width for the texture atlas: `);
+        changedConfig = true;
+    }
+    if (!config.atlasHeight || dontCheck) {
+        config.atlasHeight = readlineSync.questionInt(`Please enter a height for the texture atlas: `);
+        changedConfig = true;
+    }
+    if (!config.separation || dontCheck) {
+        config.separation = readlineSync.questionInt(`How many pixels should separate each image? Lower numbers lead to more compact atlases, but take much longer to compile: `);
+        changedConfig = true;
+    }
+    if (!config.outputImageName || dontCheck) {
+        config.outputImageName = readlineSync.question(`Output image filename is empty. Please enter a directory, including filename and extension: `);
+        changedConfig = true;
+    }
+    if (!config.outputJSONName || dontCheck) {
+        config.outputJSONName = readlineSync.question(`Output JSON filename is empty. Please enter a directory, including filename and extension: `);
+        changedConfig = true;
+    }
+    //More config options would go here.
+    if (changedConfig) {
+        if (dontCheck || readlineSync.keyInYN(`Configuration has changed. Would you like to save it for later use? `)) {
+            saveConfig();
+        }
+    }
 }
 
 const args = process.argv.slice(2);
@@ -210,6 +259,10 @@ switch (args[0]) {
         help();
         break;
     }
+    case (`config`): {
+        configure(true);
+        break;
+    }
     //More commands here
     default: {
         if (args[0] === undefined) {
@@ -219,10 +272,4 @@ switch (args[0]) {
         }
         break;
     }
-}
-
-module.exports = {
-    compile: compile,
-    set: set,
-    help: help
 }
