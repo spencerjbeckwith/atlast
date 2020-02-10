@@ -1,1 +1,10 @@
-{"atlasWidth":"512","atlasHeight":"512","outputImageName":"output.png","outputJSONName":"output.json","world":"2","directory":"C:\\Users\\Speninator\\Desktop\\web\\JoustJS\\img2","outputWhitespace":"4"}
+{
+    "atlasWidth": "1024",
+    "atlasHeight": "800",
+    "outputImageName": "output.png",
+    "outputJSONName": "output.json",
+    "world": "2",
+    "directory": "C:\\Users\\Speninator\\Desktop\\web\\JoustJS\\img2",
+    "outputWhitespace": "4",
+    "separation": 10
+}

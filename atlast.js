@@ -103,7 +103,7 @@ function arrangeAtlas() { //Called by a sprite instance when all images are load
     //Preliminary check to see if we have enough space
     const maxPixels = config.atlasWidth*config.atlasHeight;
     console.log(`Atlas size: ${config.atlasWidth}, ${config.atlasHeight}, totalling ${maxPixels} pixels.`);
-    console.log(`Image expected to use ${totalPixels} pixels, which is ${(totalPixels/maxPixels)*100}% of the atlas.`);
+    console.log(`Image expected to use ${totalPixels} pixels, which is ${Math.round((totalPixels/maxPixels)*100)}% of the atlas.`);
     if (totalPixels > maxPixels) {
         throw `Atlas size is too small! Increase the size with "npm run atlast set atlasWidth/atlasHeight <value>"`;
     }
@@ -116,6 +116,7 @@ function arrangeAtlas() { //Called by a sprite instance when all images are load
     new Jimp(config.atlasWidth,config.atlasHeight,(error,image) => {
         //Find open places for each sprite and each of its images, doing larger sprites first
         const outputObject = [];
+        const occupied = [];
         for (let s = 0; s < sprites.length; s++) {
             const spriteOutput = {
                 name: sprites[s].spriteName,
@@ -124,36 +125,60 @@ function arrangeAtlas() { //Called by a sprite instance when all images are load
                 images: []
             }
             for (let i = 0; i < sprites[s].images.length; i++) {
-                let placeX = 0, placeY = 0, placeW = spriteOutput.width, placeH = spriteOutput.height;
-                //check a spot
-            
-                //if spot is open
+                let placeW = spriteOutput.width, placeH = spriteOutput.height;
 
-                //place image, record its location into imageoutput
+                pixelLoop:
+                for (let placeX = 0; placeX <= image.bitmap.width-placeW; placeX += config.separation) {
+                    for (let placeY = 0; placeY <= image.bitmap.height-placeH; placeY += config.separation) {
 
-                //move on to next iteration
+                        //Cycle through all our occupied objects, see if our spot intersects with any.
+                        let intersecting = false;
+                        for (let occ = 0; occ < occupied.length; occ++) {
+                            if (checkIntersecting({x: placeX, y: placeY, w: placeW, h: placeH},occupied[occ])) {
+                                intersecting = true;
+                            }
+                        }
 
-                //if spot is not open
+                        if (!intersecting) {
+                            //Output for this image
+                            image.composite(sprites[s].images[i],placeX,placeY);
+                            let imageOutput = {
+                                x: placeX, y: placeY
+                            };
+                            spriteOutput.images.push(imageOutput);
 
-                //try another spot - repeat.
+                            //Mark our spot as occupied and break the loop.
+                            occupied.push({x: placeX, y: placeY, w: placeW, h: placeH});
+                            break pixelLoop; //On to the next image
+                        }
+                    }
 
-                //if no open spots: throw error.
-
-                image.composite(sprites[s].images[i],placeX,placeY);
-                let imageOutput = {
-                    x: placeX, y: placeY
-                };
-                spriteOutput.images.push(imageOutput);
+                if (placeX >= image.bitmap.width-placeW) {
+                    //We failed to find a spot.
+                    throw `Could not find location for image ${i} of sprite ${spriteOutput.name}. All available locations have been taken.`;
+                }
+                }
             }
             outputObject.push(spriteOutput);
+            console.log(`${Math.round((s/sprites.length)*100)}% Composited: ${spriteOutput.name}`)
         }
 
         //Save the outputs
         image.write(config.outputImageName);
         fs.writeFileSync(config.outputJSONName,JSON.stringify(outputObject,null,Number(config.outputWhitespace)));
+        console.groupEnd();
+        console.log(`Atlas complete! Image output: ${config.outputImageName}, JSON output: ${config.outputJSONName}`);
     });
-    console.groupEnd();
-    console.log(`Atlas complete! Image output: ${config.outputImageName}, JSON output: ${config.outputJSONName}`);
+}
+
+function checkIntersecting(rect1,rect2) {
+    if (rect1.x < rect2.x + rect2.w &&
+        rect1.x + rect1.w > rect2.x &&
+        rect1.y < rect2.y + rect2.h &&
+        rect1.y + rect1.h > rect2.y) {
+            return true;
+    }
+    return false;
 }
 
 function set(key,value) {
@@ -162,7 +187,7 @@ function set(key,value) {
         throw `Cannot update config: both a key and value must be specified.`;
     }
     config[key] = value;
-    fs.writeFileSync(`config.json`,JSON.stringify(config));
+    fs.writeFileSync(`config.json`,JSON.stringify(config,null,Number(config.outputWhitespace)));
     console.log(`config.json has been updated.`);
 }
 
