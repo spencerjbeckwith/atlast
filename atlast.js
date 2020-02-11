@@ -108,7 +108,7 @@ function arrangeAtlas() { //Called by a sprite instance when all images are load
     console.log(`Atlas size: ${config.atlasWidth}, ${config.atlasHeight}, totalling ${maxPixels} pixels.`);
     console.log(`Image expected to use ${totalPixels} pixels, which is ${Math.round((totalPixels/maxPixels)*100)}% of the atlas.`);
     if (totalPixels > maxPixels) {
-        throw `Atlas size is too small! Increase the size with "npm run atlast set atlasWidth/atlasHeight <value>"`;
+        throw `Atlas size is too small! Increase the size with "atlast set atlasWidth/atlasHeight <value>"`;
     }
 
     //Sort the sprite array: largest to smallest
@@ -168,7 +168,11 @@ function arrangeAtlas() { //Called by a sprite instance when all images are load
         }
 
         image.write(config.outputImageName);
-        fs.writeFileSync(config.outputJSONName,JSON.stringify(outputObject,null,Number(config.outputWhitespace)));
+        if (!config.outputAsJS) {
+            fs.writeFileSync(config.outputJSONName,JSON.stringify(outputObject,null,Number(config.outputWhitespace)));
+        } else {
+            fs.writeFileSync(config.outputJSONName,`ATLAST = `+JSON.stringify(outputObject,null,Number(config.outputWhitespace)));
+        }
         console.groupEnd();
         console.log(`Atlas complete! Image output: ${config.outputImageName}, JSON output: ${config.outputJSONName}`);
     });
@@ -207,8 +211,8 @@ function help() {
     console.log(`atlast by Spencer J. Beckwith. Version ${require(`./package.json`).version}.`);
     console.log(`Not sure how to get started? There are only two commands you need:`);
     console.group(); 
-    console.log(`atlast config - allows you to set your configuration, such as the locations of your images.`);
-    console.log(`atlast compile - compiles your texture atlas from the specified configuration.`);
+    console.log(`atlast config - allows you to set or reset your configuration, such as the locations of your images.`);
+    console.log(`atlast - compiles your texture atlas from the specified configuration.`);
     console.groupEnd();
 }
 
@@ -234,7 +238,11 @@ function configure(dontCheck) {
         changedConfig = true;
     }
     if (!config.outputJSONName || dontCheck) {
-        config.outputJSONName = readlineSync.question(`Output JSON filename is empty. Please enter a directory, including filename and extension: `);
+        config.outputJSONName = readlineSync.question(`Output filename is empty. Please enter a directory, including filename and extension: `);
+        changedConfig = true;
+    }
+    if (!config.outputAsJS || dontCheck) {
+        config.outputAsJS = readlineSync.keyInYN(`Would you like to export as a JavaScript file instead of JSON? `);
         changedConfig = true;
     }
     //More config options would go here.
@@ -247,10 +255,6 @@ function configure(dontCheck) {
 
 const args = process.argv.slice(2);
 switch (args[0]) {
-    case (`compile`): {
-        compile();
-        break;
-    }
     case (`set`): {
         set(args[1],args[2]);
         break;
@@ -266,7 +270,7 @@ switch (args[0]) {
     //More commands here
     default: {
         if (args[0] === undefined) {
-            help();
+            compile();
         } else {
             console.error(`Invalid atlast argument: ${args[0]}`);
         }
