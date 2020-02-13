@@ -1,6 +1,6 @@
 {
   "name": "atlast",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "Texture atlas generator for webgl sprite sheets",
   "main": "./atlast.js",
   "scripts": {
