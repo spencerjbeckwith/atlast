@@ -7,11 +7,11 @@ const readlineSync = require(`readline-sync`);
 
 let config = {};
 try {
-    onfig = JSON.parse(fs.readFileSync(`${__dirname}/atlastconfig.json`));
+    config = JSON.parse(fs.readFileSync(`${__dirname}/atlastconfig.json`));
 }
 catch (error) {
     config = {};
-    console.log(`There was a problem loading atlastconfig.json: ${error}. The file has been recreated.`);
+    console.log(`There was a problem loading atlastconfig.json: ${error}. It will be recreated.`);
 }
 
 const sprites = [];
