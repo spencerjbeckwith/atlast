@@ -1,10 +1,18 @@
+#!/usr/bin/env node
 // atlast by Spencer J. Beckwith. MIT license
 
 const fs = require(`fs`);
 const Jimp = require(`jimp`);
 const readlineSync = require(`readline-sync`);
 
-const config = JSON.parse(fs.readFileSync(`config.json`));
+let config = {};
+try {
+    onfig = JSON.parse(fs.readFileSync(`${__dirname}/atlastconfig.json`));
+}
+catch (error) {
+    config = {};
+    console.log(`There was a problem loading atlastconfig.json: ${error}. The file has been recreated.`);
+}
 
 const sprites = [];
 let totalImages = 0;
@@ -200,9 +208,9 @@ function set(key,value) {
 function saveConfig() {
     console.log(`Saving configuration...`);
     if (!config.outputWhitespace) {
-        config.outputWhitespace = readlineSync.questionInt(`Please enter a number of spaces to use as whitespace for config.json: `);
+        config.outputWhitespace = readlineSync.questionInt(`Please enter a number of spaces to use as whitespace for atlastconfig.json: `);
     }
-    fs.writeFileSync(`config.json`,JSON.stringify(config,null,Number(config.outputWhitespace)));
+    fs.writeFileSync(`atlastconfig.json`,JSON.stringify(config,null,Number(config.outputWhitespace)));
     console.log(`Atlast configuration has been updated.`);
 }
 
