@@ -74,7 +74,7 @@ function main() {
 
 ## Configuration
 
-Here is a more in-depth explanation of what each configurable value (inside `./atlastconfig.json`)actually does:
+Here is a more in-depth explanation of what each configurable value (inside `atlastconfig.json`) actually does:
 
 * **Root Directory** ```directory```: The root folder which should be scanned for all images. All images inside this folder are compiled into your atlas.
 * **Atlas Width** ```atlasWidth```: The width of the final image. Powers of 2 work best for WebGL.
