@@ -210,7 +210,7 @@ function saveConfig() {
     if (!config.outputWhitespace) {
         config.outputWhitespace = readlineSync.questionInt(`Please enter a number of spaces to use as whitespace for atlastconfig.json: `);
     }
-    fs.writeFileSync(`atlastconfig.json`,JSON.stringify(config,null,Number(config.outputWhitespace)));
+    fs.writeFileSync(`${__dirname}/atlastconfig.json`,JSON.stringify(config,null,Number(config.outputWhitespace)));
     console.log(`Atlast configuration has been updated.`);
 }
 
