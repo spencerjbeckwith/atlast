@@ -1,12 +1,18 @@
 # atlast
 
-Atlast is a texture atlas generator for sprite sheets, specifically aimed at low-resolution pixel-art games. This simple program only needs to be configured once per project, and will remember your outputs and configuration - though you will need to reconfigure when switching projects. It will take a as many images as you want and composite them all into one atlas .png file, alongside a JSON file that holds the coordinates of each image so it can be loaded very easily into a game, though you'll need to include the code to draw specific chunks of the atlas at a time.
+*What to make something like THIS:*
+
+![Example Atlas](example/output/atlas.png)
+
+*Out of a bunch of separate image files? Now you can!*
+
+Atlast is a texture atlas generator for sprite sheets. This simple program only needs to be configured once per project, and will remember your outputs and configuration - though you will need to reconfigure when switching projects. It will take a as many images as you want and composite them all into one atlas .png file, alongside a JSON file that holds the coordinates of each image so it can be loaded very easily into a game.
 
 The purpose of atlast is to be simple to use and easy to understand. Unfortunately, atlast is **not** for image-processing - it is for creating a texture atlas. To create images that work well with atlast, I recommend [Piskel](https://www.piskelapp.com/), but there are plenty of other free pixel-art programs out there. Atlast was created specifically with WebGL in mind, but these sprite sheets can definitely be used by a 2D canvas context or another program/framework entirely as long as it is able to read atlast's output JSON or JS file.
 
 ## Usage
 
-Install atlast globally by using the follow command: ```npm install -g atlast```. **You must install globally. A installing into a package will do nothing.**
+Install atlast globally by using the follow command: ```npm install -g atlast```. **You must install globally. Otherwise, it'll do nothing.**
 
 Use atlast with the following command: ```atlast```. If your configuration hasn't been set, it will ask for any unset values. Otherwise it will remember your last used configuration.
 
@@ -80,8 +86,8 @@ function main() {
 Here is a more in-depth explanation of what each configurable value (inside `atlastconfig.json`) actually does:
 
 * **Root Image Directory** ```directory```: The base folder which should be scanned for all images. All images inside this folder are compiled into your atlas.
-* **Atlas Width** ```atlasWidth```: The width of the final image. Powers of 2 work best for WebGL.
-* **Atlas Height** ```atlasHeight```: The height of the final image. Powers of 2 work best for WebGL.
+* **Atlas Width** ```atlasWidth```: The width of the final image. Powers of 2 work best for WebGL. **This must be divisible by your placement grid width.**
+* **Atlas Height** ```atlasHeight```: The height of the final image. Powers of 2 work best for WebGL. **This must be divisible by your placement grid height.**
 * **Placement Grid Width** ```sepW```: How far apart to place images horizontally. Higher values allow for better performance.
 * **Placement Grid Height** ```sepH```: How far apart to place images vertically. Higher values allow for better performance.
 * **Vertical Placement** ```verticalPlacement```: If true, images will be placed in vertical stripes before being placed horizontally.
