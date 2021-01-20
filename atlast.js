@@ -20,6 +20,8 @@ let loadedImages = 0;
 let totalPixels = 0;
 let changedConfig = false;
 
+let time, loadTime, arrangeTime;
+
 class Sprite {
     constructor(fileNameArray,spriteName) {
         this.spriteName = spriteName;
@@ -49,6 +51,7 @@ class Sprite {
         totalPixels += this.sprite.width*this.sprite.height;
         loadedImages++;
         if (loadedImages >= totalImages) {
+            loadTime = Date.now()-time;
             arrangeAtlas();
         }
     }
@@ -103,6 +106,7 @@ function compile() {
 
         dirent = directory.readSync();
     }
+
     directory.closeSync();
     console.groupEnd();
 }
@@ -125,54 +129,92 @@ function arrangeAtlas() { //Called by a sprite instance when all images are load
     });
 
     //Do the thing
+    time = Date.now();
     new Jimp(config.atlasWidth,config.atlasHeight,(error,image) => {
+
         //Find open places for each sprite and each of its images, doing larger sprites first
+        let placeX = 0; placeY = 0;
         const outputObject = [];
-        const occupied = [];
-        for (let s = 0; s < sprites.length; s++) {
+        const occupied = new Array(config.atlasWidth/config.sepW);
+        for (let o = 0; o < occupied.length; o++) {
+            occupied[o] = new Array(config.atlasHeight/config.sepH);
+            occupied[o].fill(false);
+        }
+
+        const checkOccupied = function(spr) {
+            if (spr.width <= config.sepW && spr.height <= config.sepH) {
+                return (occupied[placeX/config.sepW][placeY/config.sepH]);
+            }
+            if (placeX+spr.width > config.atlasWidth || placeY+spr.height > config.atlasHeight) {
+                return true;
+            }
+            for (let xx = placeX/config.sepW; xx <= (placeX+spr.width)/config.sepW; xx++) {
+                for (let yy = placeY/config.sepH; yy <= (placeY+spr.height)/config.sepH; yy++) {
+                    if (occupied[xx][yy]) {
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        const setOccupied = function(spr) {
+            if (spr.width <= config.sepW && spr.height <= config.sepH) {
+                occupied[placeX/config.sepW][placeY/config.sepH] = true;
+            } else {
+                for (let xx = placeX/config.sepW; xx <= (placeX+spr.width)/config.sepW; xx++) {
+                    for (let yy = placeY/config.sepH; yy <= (placeY+spr.height)/config.sepH; yy++) {
+                        occupied[xx][yy] = true;
+                    }
+                }
+            }
+        }
+
+        for (let s = 0; s < sprites.length; s++) { // For each sprite
+            let spriteTime = Date.now();
             const spriteOutput = {
                 name: sprites[s].spriteName,
                 width: sprites[s].width,
                 height: sprites[s].height,
                 images: []
             }
-            for (let i = 0; i < sprites[s].images.length; i++) {
-                let placeW = spriteOutput.width, placeH = spriteOutput.height;
-
-                pixelLoop:
-                for (let placeX = 0; placeX <= image.bitmap.width-placeW; placeX += config.separation) {
-                    for (let placeY = 0; placeY <= image.bitmap.height-placeH; placeY += config.separation) {
-
-                        //Cycle through all our occupied objects, see if our spot intersects with any.
-                        let intersecting = false;
-                        for (let occ = 0; occ < occupied.length; occ++) {
-                            if (checkIntersecting({x: placeX, y: placeY, w: placeW, h: placeH},occupied[occ])) {
-                                intersecting = true;
+            for (let i = 0; i < sprites[s].images.length; i++) { // For each image
+                // Cycle through positions on the atlas
+                while (checkOccupied(spriteOutput)) {
+                    if (config.verticalPlacement) {
+                        // Vertical
+                        placeY += config.sepH;
+                        if (placeY > config.atlasHeight) {
+                            placeX += config.sepW;
+                            placeY = 0;
+                            if (placeX > config.atlasWidth) {
+                                throw 'Atlas size too small! Increase the dimensions and try again.';
                             }
                         }
-
-                        if (!intersecting) {
-                            //Output for this image
-                            image.composite(sprites[s].images[i],placeX,placeY);
-                            let imageOutput = {
-                                x: placeX, y: placeY
-                            };
-                            spriteOutput.images.push(imageOutput);
-
-                            //Mark our spot as occupied and break the loop.
-                            occupied.push({x: placeX, y: placeY, w: placeW, h: placeH});
-                            break pixelLoop; //On to the next image
+                    } else {
+                        // Horizontal
+                        placeX += config.sepW;
+                        if (plcaeX > config.atlasWidth) {
+                            placeY += config.sepH;
+                            placeX = 0;
+                            if (placeY > config.atlasHeight) {
+                                throw 'Atlas size too small! Increase the dimensions and try again.';
+                            }
                         }
                     }
-
-                    if (placeX >= image.bitmap.width-placeW) {
-                        //We failed to find a spot.
-                        throw `Could not find location for image ${i} of sprite ${spriteOutput.name}. All available locations have been taken.`;
-                    }
                 }
+
+                // If we got here, we found an unoccupied spot.
+                image.composite(sprites[s].images[i],placeX,placeY);
+                setOccupied(spriteOutput);
+                spriteOutput.images.push({
+                    x: placeX, y: placeY
+                });
             }
+
+            // Record full sprite
             outputObject.push(spriteOutput);
-            console.log(`${Math.round((s/sprites.length)*100)}% Composited: ${spriteOutput.name}`)
+            console.log(`${Math.round((s/sprites.length)*100)}% Composited: ${spriteOutput.name} (${Date.now()-spriteTime}ms)`)
         }
 
         image.write(config.outputImageName);
@@ -182,18 +224,11 @@ function arrangeAtlas() { //Called by a sprite instance when all images are load
             fs.writeFileSync(config.outputJSONName,`ATLAST = `+JSON.stringify(outputObject,null,Number(config.outputWhitespace)));
         }
         console.groupEnd();
+        arrangeTime = Date.now()-time;
+        console.log(`Load Time: ${loadTime}ms`);
+        console.log(`Arrange Time: ${arrangeTime}ms`);
         console.log(`Atlas complete! Image output: ${config.outputImageName}, JSON output: ${config.outputJSONName}`);
     });
-}
-
-function checkIntersecting(rect1,rect2) {
-    if (rect1.x < rect2.x + rect2.w &&
-        rect1.x + rect1.w > rect2.x &&
-        rect1.y < rect2.y + rect2.h &&
-        rect1.y + rect1.h > rect2.y) {
-            return true;
-    }
-    return false;
 }
 
 function set(key,value) {
