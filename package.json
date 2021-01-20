@@ -23,7 +23,10 @@
     "url": "https://github.com/spencerjbeckwith/atlast/issues"
   },
   "homepage": "https://github.com/spencerjbeckwith/atlast#readme",
-  "files": ["atlast.js","atlastconfig.json"],
+  "files": [
+    "atlast.js",
+    "atlastconfig.json"
+  ],
   "dependencies": {
     "jimp": "^0.9.3",
     "readline-sync": "^1.4.10"

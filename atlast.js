@@ -71,6 +71,7 @@ function compile() {
     //Find all our file paths
     const directory = fs.opendirSync(config.directory);
     let dirent = directory.readSync();
+    time = Date.now();
 
     while (dirent !== null) {
         if (dirent.isDirectory()) {
@@ -148,8 +149,8 @@ function arrangeAtlas() { //Called by a sprite instance when all images are load
             if (placeX+spr.width > config.atlasWidth || placeY+spr.height > config.atlasHeight) {
                 return true;
             }
-            for (let xx = placeX/config.sepW; xx <= (placeX+spr.width)/config.sepW; xx++) {
-                for (let yy = placeY/config.sepH; yy <= (placeY+spr.height)/config.sepH; yy++) {
+            for (let xx = placeX/config.sepW; xx < (placeX+spr.width)/config.sepW; xx++) {
+                for (let yy = placeY/config.sepH; yy < (placeY+spr.height)/config.sepH; yy++) {
                     if (occupied[xx][yy]) {
                         return true;
                     }
@@ -162,8 +163,8 @@ function arrangeAtlas() { //Called by a sprite instance when all images are load
             if (spr.width <= config.sepW && spr.height <= config.sepH) {
                 occupied[placeX/config.sepW][placeY/config.sepH] = true;
             } else {
-                for (let xx = placeX/config.sepW; xx <= (placeX+spr.width)/config.sepW; xx++) {
-                    for (let yy = placeY/config.sepH; yy <= (placeY+spr.height)/config.sepH; yy++) {
+                for (let xx = placeX/config.sepW; xx < (placeX+spr.width)/config.sepW; xx++) {
+                    for (let yy = placeY/config.sepH; yy < (placeY+spr.height)/config.sepH; yy++) {
                         occupied[xx][yy] = true;
                     }
                 }
@@ -184,20 +185,20 @@ function arrangeAtlas() { //Called by a sprite instance when all images are load
                     if (config.verticalPlacement) {
                         // Vertical
                         placeY += config.sepH;
-                        if (placeY > config.atlasHeight) {
+                        if (placeY >= config.atlasHeight) {
                             placeX += config.sepW;
                             placeY = 0;
-                            if (placeX > config.atlasWidth) {
+                            if (placeX >= config.atlasWidth) {
                                 throw 'Atlas size too small! Increase the dimensions and try again.';
                             }
                         }
                     } else {
                         // Horizontal
                         placeX += config.sepW;
-                        if (plcaeX > config.atlasWidth) {
+                        if (placeX >= config.atlasWidth) {
                             placeY += config.sepH;
                             placeX = 0;
-                            if (placeY > config.atlasHeight) {
+                            if (placeY >= config.atlasHeight) {
                                 throw 'Atlas size too small! Increase the dimensions and try again.';
                             }
                         }
@@ -251,7 +252,7 @@ function saveConfig() {
 
 function help() {
     //Display help
-    console.log(`atlast by Spencer J. Beckwith. Version ${require(`./package.json`).version}.`);
+    console.log(`atlast by Spencer Beckwith. Version ${require(`./package.json`).version}.`);
     console.log(`Not sure how to get started? There are only two commands you need:`);
     console.group(); 
     console.log(`atlast config - allows you to set or reset your configuration, such as the locations of your images.`);
@@ -260,31 +261,51 @@ function help() {
 }
 
 function configure(dontCheck) {
-    if (!config.directory || dontCheck) {
-        config.directory = readlineSync.question(`Please enter the root directory of all images you wish to compile: `);
+    if (config.directory === undefined  || dontCheck) {
+        const old = config.directory;
+        config.directory = readlineSync.question(`Please enter the directory containing all images you wish to compile (${(config.directory || "")}): `);
+        if (config.directory === '') {
+            config.directory = old;
+        }
         changedConfig = true;
     }
-    if (!config.atlasWidth || dontCheck) {
-        config.atlasWidth = readlineSync.questionInt(`Please enter a width for the texture atlas: `);
+    if (config.atlasWidth === undefined  || dontCheck) {
+        config.atlasWidth = readlineSync.questionInt(`Please enter a width for the texture atlas (${config.atlasWidth}): `);
         changedConfig = true;
     }
-    if (!config.atlasHeight || dontCheck) {
-        config.atlasHeight = readlineSync.questionInt(`Please enter a height for the texture atlas: `);
+    if (config.atlasHeight === undefined  || dontCheck) {
+        config.atlasHeight = readlineSync.questionInt(`Please enter a height for the texture atlas (${config.atlasHeight}): `);
         changedConfig = true;
     }
-    if (!config.separation || dontCheck) {
-        config.separation = readlineSync.questionInt(`How many pixels should separate each image? Lower numbers lead to more compact atlases, but take much longer to compile: `);
+    if (config.sepW === undefined  || dontCheck) {
+        config.sepW = readlineSync.questionInt(`Enter a width for the placement grid (${config.sepW}): `);
         changedConfig = true;
     }
-    if (!config.outputImageName || dontCheck) {
-        config.outputImageName = readlineSync.question(`Output image filename is empty. Please enter a directory, including filename and extension: `);
+    if (config.sepH === undefined  || dontCheck) {
+        config.sepH = readlineSync.questionInt(`Enter a height for the placement grid (${config.sepH}): `);
         changedConfig = true;
     }
-    if (!config.outputJSONName || dontCheck) {
-        config.outputJSONName = readlineSync.question(`Output filename is empty. Please enter a directory, including filename and extension: `);
+    if (config.verticalPlacement === undefined || dontCheck) {
+        config.verticalPlacement = readlineSync.keyInYN(`Do you want images to be placed vertically instead of horizontally? `);
         changedConfig = true;
     }
-    if (!config.outputAsJS || dontCheck) {
+    if (config.outputImageName === undefined  || dontCheck) {
+        const old = config.outputImageName;
+        config.outputImageName = readlineSync.question(`Please enter an output image filename, including extension (${config.outputImageName}): `);
+        if (config.outputImageName === '') {
+            config.outputImageName = old;
+        }
+        changedConfig = true;
+    }
+    if (config.outputJSONName === undefined || dontCheck) {
+        const old = config.outputJSONName;
+        config.outputJSONName = readlineSync.question(`Please enter an output JavaScript or JSON filename, including extension (${config.outputJSONName}): `);
+        if (config.outputJSONName === '') {
+            config.outputJSONName = old;
+        }
+        changedConfig = true;
+    }
+    if (config.outputAsJS === undefined  || dontCheck) {
         config.outputAsJS = readlineSync.keyInYN(`Would you like to export as a JavaScript file instead of JSON? `);
         changedConfig = true;
     }
