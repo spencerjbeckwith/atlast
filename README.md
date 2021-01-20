@@ -1,6 +1,6 @@
 # atlast
 
-*What to make something like THIS:*
+*Want to make something like THIS:*
 
 ![Example Atlas](example/output/atlas.png)
 
