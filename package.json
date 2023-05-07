@@ -28,7 +28,7 @@
     "atlastconfig.json"
   ],
   "dependencies": {
-    "jimp": "^0.9.8",
+    "jimp": "^0.22.7",
     "readline-sync": "^1.4.10"
   }
 }
